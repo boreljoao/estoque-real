@@ -2,10 +2,7 @@ import Stripe from 'stripe'
 import { prisma } from './db'
 import type { Plan } from '@prisma/client'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil',
-  typescript: true,
-})
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export const STRIPE_PLANS = {
   FREE: {
