@@ -44,17 +44,19 @@ export async function POST(request: Request) {
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
-        if (invoice.subscription) {
-          await syncOrgPlanFromStripe(invoice.subscription as string)
+        const subId = invoice.parent?.subscription_details?.subscription
+        if (subId) {
+          await syncOrgPlanFromStripe(subId)
         }
         break
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        if (invoice.subscription) {
+        const failedSubId = invoice.parent?.subscription_details?.subscription
+        if (failedSubId) {
           await prisma.organization.updateMany({
-            where: { stripeSubscriptionId: invoice.subscription as string },
+            where: { stripeSubscriptionId: failedSubId },
             data: { subscriptionStatus: 'PAST_DUE' },
           })
         }
