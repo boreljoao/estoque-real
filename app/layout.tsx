@@ -19,7 +19,7 @@ const figtree = Figtree({
 const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
-  weight: ['400', '500'],
+  weight: ['400', '500', '700'],
   display: 'swap',
 })
 
@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" data-theme="dark">
+    <html lang="pt-BR">
       <body className={`${syne.variable} ${figtree.variable} ${jetbrains.variable}`}>
         {children}
       </body>
