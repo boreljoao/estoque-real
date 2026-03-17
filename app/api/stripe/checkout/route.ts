@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { stripe, getOrCreateStripeCustomer, STRIPE_PLANS } from '@/lib/stripe'
+import { getStripe, getOrCreateStripeCustomer, STRIPE_PLANS } from '@/lib/stripe'
 import type { Plan } from '@prisma/client'
 
 export async function POST(request: Request) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid plan price' }, { status: 400 })
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customer.id,
       mode: 'subscription',
       payment_method_types: ['card'],

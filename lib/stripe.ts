@@ -1,8 +1,7 @@
 import Stripe from 'stripe'
 import { prisma } from './db'
-type Plan = 'FREE' | 'PRO' | 'ENTERPRISE'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+type Plan = 'FREE' | 'PRO' | 'ENTERPRISE'
 
 export const STRIPE_PLANS: Record<Plan, { priceId: string | null; maxUsers: number; maxProducts: number; features: string[] }> = {
   FREE: {
@@ -25,7 +24,12 @@ export const STRIPE_PLANS: Record<Plan, { priceId: string | null; maxUsers: numb
   },
 }
 
+export function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
+
 export async function getOrCreateStripeCustomer(orgId: string, email: string, orgName: string) {
+  const stripe = getStripe()
   try {
     const org = await prisma.organization.findUniqueOrThrow({ where: { id: orgId } })
 
@@ -52,6 +56,7 @@ export async function getOrCreateStripeCustomer(orgId: string, email: string, or
 }
 
 export async function syncOrgPlanFromStripe(subscriptionId: string) {
+  const stripe = getStripe()
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
       expand: ['items.data.price.product'],
