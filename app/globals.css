@@ -492,11 +492,6 @@ ul, ol { list-style: none; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  animation: hintBounce 2s ease-in-out infinite;
-}
-@keyframes hintBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
 }
 .mockup {
   border-radius: var(--radius-xl);
