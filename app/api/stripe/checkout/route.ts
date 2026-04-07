@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getStripe, getOrCreateStripeCustomer, STRIPE_PLANS } from '@/lib/stripe'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { Plan } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
+    const limited = await checkRateLimit('checkout', getClientIp())
+    if (limited) return limited
+
     const user = await getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

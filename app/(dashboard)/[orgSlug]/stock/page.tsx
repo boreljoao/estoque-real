@@ -1,5 +1,6 @@
 import { getOrgBySlug } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { OpenMovementButton } from './components/OpenMovementButton'
 
 export default async function StockPage({ params, searchParams }: {
   params: { orgSlug: string }
@@ -50,10 +51,7 @@ export default async function StockPage({ params, searchParams }: {
           </div>
         </div>
         <div className="dash-header-right">
-          <button className="dash-btn dash-btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Nova Movimentação
-          </button>
+          <OpenMovementButton />
         </div>
       </div>
 
@@ -146,7 +144,7 @@ export default async function StockPage({ params, searchParams }: {
               </div>
               <div className="dash-empty-title">Nenhuma movimentação</div>
               <div className="dash-empty-desc">Registre entradas e saídas para acompanhar o estoque.</div>
-              <button className="dash-btn dash-btn-primary">+ Nova Movimentação</button>
+              <OpenMovementButton />
             </div>
           )}
         </div>

@@ -36,5 +36,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@sentry/nextjs": "^10.47.0"
   }
 }

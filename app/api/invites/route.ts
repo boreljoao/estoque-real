@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Resend } from 'resend'
+import { withLimitLock, LimitError } from '@/lib/plan-limits'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { sendEmail } from '@/lib/emails/send'
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +18,10 @@ export async function POST(request: Request) {
     if (!orgId || !email || !role) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
+
+    // Rate limit: 10 invites/hour per org
+    const limited = await checkRateLimit('invite', `org:${orgId}`)
+    if (limited) return limited
 
     // Verify caller is ADMIN+ in this org
     const membership = await prisma.orgMember.findFirst({
@@ -41,6 +47,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User is already a member' }, { status: 409 })
     }
 
+    // Check user limit (transactional, with row lock)
+    try {
+      await prisma.$transaction(async (tx) => {
+        await withLimitLock(tx, orgId, 'users')
+      })
+    } catch (e) {
+      if (e instanceof LimitError) {
+        return NextResponse.json(
+          {
+            error:   'LIMIT_REACHED',
+            current: e.current,
+            max:     e.max,
+            plan:    e.plan,
+          },
+          { status: 403 },
+        )
+      }
+      throw e
+    }
+
     // Create invite
     const invite = await prisma.orgInvite.create({
       data: {
@@ -52,24 +78,24 @@ export async function POST(request: Request) {
       },
     })
 
-    // Send invitation email
+    // Send invitation email via template
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invite.token}`
 
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM!,
-      to: email,
-      subject: `Convite para ${membership.org.name} no StockPro`,
-      html: `
-        <h2>Você foi convidado!</h2>
-        <p>${user.email} convidou você para a organização <strong>${membership.org.name}</strong> no StockPro.</p>
-        <p><a href="${inviteUrl}" style="background:#2563eb;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Aceitar Convite</a></p>
-        <p>Este convite expira em 7 dias.</p>
-      `,
+    await sendEmail({
+      template: 'invite',
+      to:       email,
+      data: {
+        inviterName: user.email ?? 'Alguém',
+        orgName:     membership.org.name,
+        role,
+        inviteUrl,
+        expiresAt:   invite.expiresAt.toISOString(),
+      },
     })
 
     return NextResponse.json({ invite })
   } catch (error) {
-    console.error('Invite creation error:', error)
+    console.error('[POST /api/invites]', { error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

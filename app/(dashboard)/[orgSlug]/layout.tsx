@@ -1,6 +1,8 @@
 import { getOrgBySlug, getProfile } from '@/lib/auth'
 import Link from 'next/link'
 import '../dashboard.css'
+import { QuickMovementPanel } from './stock/components/QuickMovementPanel'
+import { TrialBanner } from './components/TrialBanner'
 
 const navItems = [
   { label: 'Dashboard', href: '', icon: 'dashboard' },
@@ -79,8 +81,17 @@ export default async function DashboardLayout({
       </aside>
 
       <div className="dash-main">
+        <TrialBanner
+          orgId={org.id}
+          orgSlug={params.orgSlug}
+          subscriptionStatus={org.subscriptionStatus}
+          trialEndsAt={org.trialEndsAt?.toISOString() ?? null}
+          plan={org.plan}
+        />
         {children}
       </div>
+
+      <QuickMovementPanel orgSlug={params.orgSlug} />
     </div>
   )
 }

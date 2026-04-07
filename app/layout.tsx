@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
+import { SentryUserContext } from '@/components/SentryUserContext'
+import { getUser } from '@/lib/auth'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,14 +29,20 @@ export const metadata: Metadata = {
   description: 'Controle de entradas, saídas, alertas e previsão de estoque em tempo real. Para empresas que não improvisam.',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const user = await getUser().catch(() => null)
+
   return (
     <html lang="pt-BR">
       <body className={`${inter.variable} ${jakarta.variable} ${jetbrains.variable}`}>
+        {/* Sets Sentry.setUser on the client after hydration */}
+        {user && (
+          <SentryUserContext userId={user.id} userEmail={user.email ?? undefined} />
+        )}
         {children}
       </body>
     </html>

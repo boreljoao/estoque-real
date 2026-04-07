@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { sendEmail } from '@/lib/emails/send'
 
 const createOrgSchema = z.object({
   name: z.string().min(2).max(100),
@@ -14,6 +16,10 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Rate limit: 3 orgs/hour per user
+    const limited = await checkRateLimit('org-create', `user:${user.id}`)
+    if (limited) return limited
 
     const body = await request.json()
     const parsed = createOrgSchema.safeParse(body)
@@ -56,9 +62,25 @@ export async function POST(request: Request) {
       return newOrg
     })
 
+    // Send welcome email (fire-and-forget — don't block the response)
+    const profile = await prisma.profile.findUnique({
+      where:  { id: user.id },
+      select: { fullName: true, email: true },
+    }).catch(() => null)
+
+    sendEmail({
+      template: 'welcome',
+      to:       user.email!,
+      data: {
+        userName: profile?.fullName ?? user.email ?? 'Usuário',
+        orgName:  org.name,
+        appUrl:   `${process.env.NEXT_PUBLIC_APP_URL}/${org.slug}`,
+      },
+    }).catch((err) => console.error('[orgs] welcome email failed:', err))
+
     return NextResponse.json({ org }, { status: 201 })
   } catch (error) {
-    console.error('Org creation error:', error)
+    console.error('[POST /api/orgs]', { error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -83,7 +105,7 @@ export async function GET() {
       })),
     })
   } catch (error) {
-    console.error('Org list error:', error)
+    console.error('[GET /api/orgs]', { error: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
